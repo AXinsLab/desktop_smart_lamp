@@ -377,6 +377,22 @@ bool espnow_ctrl_is_paired(void) {
     return g_espnow_ctx.is_paired;
 }
 
+void espnow_ctrl_clear_pairing(void) {
+    LOG_I("Clearing pairing info...");
+
+    // 删除peer
+    if (g_espnow_ctx.is_paired) {
+        esp_now_del_peer(g_espnow_ctx.peer_mac);
+    }
+
+    // 清除内存
+    memset(&g_espnow_ctx, 0, sizeof(g_espnow_ctx));
+    g_espnow_ctx.state = PAIRING_STATE_INIT;
+    g_espnow_ctx.is_paired = false;
+
+    LOG_I("Pairing cleared");
+}
+
 bool espnow_ctrl_get_peer_mac(uint8_t *mac_out) {
     if (!g_espnow_ctx.is_paired || mac_out == NULL) {
         return false;

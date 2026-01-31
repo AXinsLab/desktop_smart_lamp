@@ -111,14 +111,6 @@ void setup() {
     LOG_I("  Smart Lamp Controller Starting");
     LOG_I("======================================");
 
-    // 调试选项：清除NVS强制重新配对
-#if CONFIG_CLEAR_NVS_ON_BOOT
-    LOG_W("!!! CONFIG_CLEAR_NVS_ON_BOOT is enabled !!!");
-    LOG_W("Clearing NVS for fresh pairing...");
-    power_mgmt_clear_nvs();
-    LOG_I("NVS cleared. Please set CONFIG_CLEAR_NVS_ON_BOOT to 0 after first successful pairing.");
-#endif
-
     // 初始化所有模块
     if (!initialize_system()) {
         LOG_E("System initialization failed!");
@@ -169,6 +161,16 @@ void loop() {
 
     // 处理编码器和按键事件
     encoder_event_t event = encoder_process(&g_current_lamp_state, &g_new_lamp_state);
+
+    // 处理重置事件
+    if (event == ENCODER_EVENT_BTN_RESET) {
+        LOG_I("=== RESET: Clearing pairing ===");
+        power_mgmt_clear_nvs();
+        espnow_ctrl_clear_pairing();
+        LOG_I("Restarting...");
+        delay(1000);
+        ESP.restart();
+    }
 
     if (event != ENCODER_EVENT_NONE) {
         // 检查状态是否变化

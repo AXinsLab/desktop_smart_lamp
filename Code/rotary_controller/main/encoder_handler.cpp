@@ -26,11 +26,17 @@ void IRAM_ATTR encoder_isr(void) {
 
 // ==================== 按键回调函数 ====================
 
+// 按键事件标志
+static encoder_event_t g_button_event = ENCODER_EVENT_NONE;
+static uint32_t g_button_press_start_time = 0;
+static bool g_button_was_pressed = false;
+
 /**
  * @brief 短按回调（用于Button2）
  */
 static void on_button_click(Button2 &btn) {
-    LOG_D("Button clicked");
+    LOG_I("Button clicked");
+    g_button_event = ENCODER_EVENT_BTN_CLICK;
     g_last_activity_time = millis();
     g_activity_flag = true;
 }
@@ -39,7 +45,8 @@ static void on_button_click(Button2 &btn) {
  * @brief 长按回调（用于Button2）
  */
 static void on_button_long_press(Button2 &btn) {
-    LOG_D("Button long pressed");
+    LOG_I("Button long pressed");
+    g_button_event = ENCODER_EVENT_BTN_LONG_PRESS;
     g_last_activity_time = millis();
     g_activity_flag = true;
 }
@@ -110,6 +117,23 @@ encoder_event_t encoder_process(const lamp_state_t *current_state, lamp_state_t 
 
     // 更新按键状态
     g_encoder_button->loop();
+
+    // 检测超长按（5秒重置）
+    if (g_encoder_button->isPressed()) {
+        if (!g_button_was_pressed) {
+            g_button_press_start_time = millis();
+            g_button_was_pressed = true;
+        } else {
+            uint32_t press_duration = millis() - g_button_press_start_time;
+            if (press_duration >= CONFIG_BTN_RESET_PRESS_MS) {
+                LOG_I("RESET: 5s press detected!");
+                g_button_event = ENCODER_EVENT_BTN_RESET;
+                g_button_was_pressed = false;  // 防止重复触发
+            }
+        }
+    } else {
+        g_button_was_pressed = false;
+    }
 
     // 检查按键按下/释放（切换模式）
     if (g_encoder_button->isPressed()) {
@@ -190,43 +214,37 @@ encoder_event_t encoder_process(const lamp_state_t *current_state, lamp_state_t 
         lamp_calculate_duty(new_state);
     }
 
-    // 检查按键事件
-    if (g_activity_flag && !g_encoder_button->isPressed()) {
-        // 检查是否是长按（关灯）
-        // Button2的longClickDetected会在长按时触发，我们通过检查按键持续时间判断
-        static uint32_t btn_press_time = 0;
-        static bool was_pressed = false;
+    // 检查按键事件（由Button2回调或超长按检测设置）
+    if (g_button_event != ENCODER_EVENT_NONE) {
+        if (g_button_event == ENCODER_EVENT_BTN_RESET) {
+            // 超长按：重置配对（不修改灯光状态）
+            event = ENCODER_EVENT_BTN_RESET;
+        } else {
+            memcpy(new_state, current_state, sizeof(lamp_state_t));
 
-        if (g_encoder_button->isPressed() && !was_pressed) {
-            btn_press_time = millis();
-            was_pressed = true;
-        } else if (!g_encoder_button->isPressed() && was_pressed) {
-            uint32_t press_duration = millis() - btn_press_time;
-            was_pressed = false;
-
-            if (press_duration >= CONFIG_BTN_LONG_PRESS_MS) {
-                // 长按：关灯
-                if (current_state->is_on) {
-                    LOG_I("Long press detected, turning off lamp");
-                    memcpy(new_state, current_state, sizeof(lamp_state_t));
-                    new_state->is_on = false;
+            if (g_button_event == ENCODER_EVENT_BTN_CLICK) {
+                // 短按：切换开关
+                LOG_I("Short press: toggling lamp");
+                new_state->is_on = !current_state->is_on;
+                if (new_state->is_on) {
+                    lamp_calculate_duty(new_state);
+                } else {
                     new_state->duty_ch0 = 0;
                     new_state->duty_ch1 = 0;
-                    event = ENCODER_EVENT_BTN_LONG_PRESS;
                 }
-            } else {
-                // 短按：开灯
-                if (!current_state->is_on) {
-                    LOG_I("Click detected, turning on lamp");
-                    memcpy(new_state, current_state, sizeof(lamp_state_t));
-                    new_state->is_on = true;
-                    lamp_calculate_duty(new_state);
-                    event = ENCODER_EVENT_BTN_CLICK;
-                }
+                event = ENCODER_EVENT_BTN_CLICK;
             }
-
-            g_activity_flag = false;
+            else if (g_button_event == ENCODER_EVENT_BTN_LONG_PRESS) {
+                // 长按：关灯
+                LOG_I("Long press: turning off lamp");
+                new_state->is_on = false;
+                new_state->duty_ch0 = 0;
+                new_state->duty_ch1 = 0;
+                event = ENCODER_EVENT_BTN_LONG_PRESS;
+            }
         }
+
+        g_button_event = ENCODER_EVENT_NONE;  // 清除事件
     }
 
     return event;

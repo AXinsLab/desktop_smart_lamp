@@ -58,6 +58,11 @@ bool espnow_ctrl_auto_pair(void);
 bool espnow_ctrl_send_command(command_type_t cmd, const lamp_state_t *state);
 
 /**
+ * @brief 清除配对信息（用于重置）
+ */
+void espnow_ctrl_clear_pairing(void);
+
+/**
  * @brief 快速重连（用于深度睡眠唤醒）
  *
  * 从RTC内存恢复配对信息，跳过扫描直接连接

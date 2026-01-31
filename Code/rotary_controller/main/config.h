@@ -24,6 +24,7 @@
 // ==================== 按键参数 ====================
 #define CONFIG_BTN_DEBOUNCE_MS         50    // 消抖时间
 #define CONFIG_BTN_LONG_PRESS_MS       2000  // 长按触发时间
+#define CONFIG_BTN_RESET_PRESS_MS      5000  // 超长按重置配对时间
 #define CONFIG_BTN_DOUBLE_CLICK_MS     300   // 双击检测时间
 
 // ==================== PWM参数 ====================
@@ -69,7 +70,6 @@
 // ==================== 调试配置 ====================
 #define CONFIG_SERIAL_BAUD_RATE        115200
 #define CONFIG_LOG_LEVEL_DEBUG         1     // 启用调试日志（0=关闭，1=启用）
-#define CONFIG_CLEAR_NVS_ON_BOOT       1     // 启动时清除NVS（首次配对时设为1，正常使用设为0）
 
 // ==================== 日志宏定义 ====================
 #if CONFIG_LOG_LEVEL_DEBUG

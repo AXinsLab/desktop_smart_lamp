@@ -47,17 +47,6 @@ void setup() {
     LOG_I("    Smart Lamp Driver Starting");
     LOG_I("======================================");
 
-    // 调试选项：清除NVS（通常不需要）
-#if CONFIG_CLEAR_NVS_ON_BOOT
-    LOG_W("!!! CONFIG_CLEAR_NVS_ON_BOOT is enabled !!!");
-    LOG_W("Clearing NVS...");
-    Preferences prefs;
-    prefs.begin(CONFIG_NVS_NAMESPACE, false);
-    prefs.clear();
-    prefs.end();
-    LOG_I("NVS cleared.");
-#endif
-
     // 初始化所有模块
     if (!initialize_system()) {
         LOG_E("System initialization failed!");

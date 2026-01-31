@@ -39,8 +39,7 @@
 
 // ==================== 调试配置 ====================
 #define CONFIG_SERIAL_BAUD_RATE        115200
-#define CONFIG_LOG_LEVEL_DEBUG         1     // 启用调试日志（0=关闭，1=启用）
-#define CONFIG_CLEAR_NVS_ON_BOOT       0     // 启动时清除NVS（通常设为0，驱动器无需清除）
+#define CONFIG_LOG_LEVEL_DEBUG         0     // 启用调试日志（0=关闭，1=启用）
 
 // ==================== 日志宏定义 ====================
 #if CONFIG_LOG_LEVEL_DEBUG

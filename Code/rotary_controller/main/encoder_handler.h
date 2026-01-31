@@ -25,7 +25,8 @@ typedef enum {
     ENCODER_EVENT_BTN_PRESS,      // 按键按下
     ENCODER_EVENT_BTN_RELEASE,    // 按键释放
     ENCODER_EVENT_BTN_CLICK,      // 短按
-    ENCODER_EVENT_BTN_LONG_PRESS  // 长按
+    ENCODER_EVENT_BTN_LONG_PRESS, // 长按
+    ENCODER_EVENT_BTN_RESET       // 超长按（5秒，重置配对）
 } encoder_event_t;
 
 // ==================== 公开函数 ====================
