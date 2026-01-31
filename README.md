@@ -61,20 +61,25 @@
 
 ### 重点提示
 
-截至到目前，台灯的旋转控制器代码仍然有Bug，AXin正在利用业余时间修复中，只能保证基础功能的正常使用。建议大家优先复刻滑动控制版本。
-
-待开发功能：
-1. 控制器Deep Sleep模式修复
-2. 控制器与驱动板自动配对
+**待开发功能:**
+1. ~~控制器Deep Sleep模式修复~~ 已完成  
+2. ~~控制器与驱动板自动配对~~ 已完成
 3. 控制器低电提醒
-4. HomeAssistant接入
+4. ~~HomeAssistant接入~~ 太监，没需求，不想搞了
 
-### 下载步骤
-Clone the repo
+### 下载步骤 
+1. 下载 ``Code\Lamp_Driver\Lamp_Driver.bin``   
+2. 下载 ``Code\rotary_controller\rotary_controller.bin``  
+3. 使用``idf.py flash``工具直接烧录至对应的板子即可，做了自动配对，首次使用可能需要先手动配对一次，手动配对操作见**交互操作部分**  
 
-```sh
-git clone https://github.com/grant-Gan/desktop_smart_lamp.git
-```
+### 交互操作
+- **顺时针/逆时针 旋转编码器：** 调亮/调暗 灯光  
+- **按下编码器按钮+旋转编码器：** 调节色温
+- **单击按钮/旋转编码器：** 开灯
+- **长按编码器按键2S：** 关灯
+- **长按编码器按键5S：** 重新配对
+
+
 
 ### 文件目录说明
 
@@ -94,7 +99,7 @@ desktop_smart_lamp
 ├── /images
 ├── /Code
 │  ├── /Lamp_Driver
-│  ├── /Lamp_Driver
+│  ├── /rotary_controller
 ├── /PCBA
 │  ├── /Gerber_Base_Board_20250723.zip
 │  ├── /Gerber_Driver_Board_20250723.zip
@@ -233,7 +238,7 @@ desktop_smart_lamp
 
 AXin实验室
 
-Bilibili:@AXin实验室 小红书:@AXin实验室   
+Bilibili:@AXin实验室 小红书:@AXin实验室  闲鱼:@AXin实验室  
 
 ### 版权说明
 本项目采用 **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License** 授权。
