@@ -18,7 +18,6 @@ build/
 *~
 
 # 编译输出的二进制文件
-*.bin
 *.elf
 
 # ESP-IDF
