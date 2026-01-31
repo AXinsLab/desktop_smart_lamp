@@ -1,0 +1,25 @@
+# 项目管理文档（Claude开发辅助文件）
+ACTION.md
+CLAUDE.md
+ERROR.md
+PLAN.md
+
+# 构建输出
+build/
+*/build/
+
+# IDE 配置
+.vscode/
+.idea/
+
+# 临时文件
+*.tmp
+*.bak
+*~
+
+# 编译输出的二进制文件
+*.bin
+*.elf
+
+# ESP-IDF
+sdkconfig.old
