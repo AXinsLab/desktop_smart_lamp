@@ -5,7 +5,7 @@
     "idf.openOcdConfigs": [
         "board/esp32c2-ftdi.cfg"
     ],
-    "idf.portWin": "COM19",
+    "idf.portWin": "COM26",
     "idf.toolsPathWin": "C:\\Users\\Grant\\.espressif",
     "files.associations": {
         "array": "cpp",

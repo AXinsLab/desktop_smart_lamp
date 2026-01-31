@@ -1,4 +1,13 @@
 idf_component_register(
-    SRCS "main.cpp"
-    INCLUDE_DIRS ""
+    SRCS
+        "main.cpp"
+        "esp_now_ctrl.cpp"
+        "encoder_handler.cpp"
+        "power_mgmt.cpp"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        nvs_flash
+        driver
+        components
 )

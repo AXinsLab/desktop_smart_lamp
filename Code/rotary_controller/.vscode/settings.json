@@ -5,7 +5,7 @@
     "idf.openOcdConfigs": [
         "board/esp32c2-ftdi.cfg"
     ],
-    "idf.portWin": "COM21",
+    "idf.portWin": "COM23",
     "idf.toolsPathWin": "C:\\Users\\Grant\\.espressif",
     "idf.customExtraVars": {
         "IDF_TARGET": "esp32c2"
