@@ -124,9 +124,8 @@ void espnow_ctrl_on_data_recv(const uint8_t *mac_addr, const uint8_t *data, int 
                 LOG_E("Failed to add driver as peer");
             }
 
-            // 保存到NVS和RTC
+            // 保存到NVS（ESP32-C2无RTC内存）
             power_mgmt_save_pairing_info(g_espnow_ctx.peer_mac, g_espnow_ctx.peer_channel);
-            power_mgmt_save_pairing_to_rtc(g_espnow_ctx.peer_mac, g_espnow_ctx.peer_channel);
 
             LOG_I("Pairing completed in %lu ms", millis() - g_espnow_ctx.last_request_time);
             LOG_I("Saved peer MAC (should be real MAC): ");
@@ -150,9 +149,7 @@ void espnow_ctrl_on_data_recv(const uint8_t *mac_addr, const uint8_t *data, int 
                   data_msg->lamp_state.brightness,
                   data_msg->lamp_state.temperature,
                   data_msg->lamp_state.is_on);
-
-            // 更新RTC状态
-            power_mgmt_save_lamp_state_to_rtc(&data_msg->lamp_state);
+            // 状态响应仅用于确认，无需额外保存
         }
     }
 }

@@ -10,11 +10,8 @@
 #include <driver/rtc_io.h>
 #include <string.h>
 
-// ==================== RTC内存变量定义 ====================
-RTC_DATA_ATTR bool rtc_is_paired = false;
-RTC_DATA_ATTR uint8_t rtc_peer_mac[6] = {0};
-RTC_DATA_ATTR uint8_t rtc_peer_channel = 0;
-RTC_DATA_ATTR lamp_state_t rtc_lamp_state = {0};
+// ==================== RTC内存说明 ====================
+// ESP32-C2无RTC内存支持，所有状态通过NVS持久化
 
 // ==================== 模块私有变量 ====================
 static Preferences g_preferences;
@@ -82,18 +79,9 @@ bool power_mgmt_init(void) {
             break;
     }
 
-    // 配置GPIO唤醒（下降沿触发）
+    // ==================== GPIO 唤醒配置 ====================
+    // Deep Sleep GPIO唤醒配置
     esp_deep_sleep_enable_gpio_wakeup(CONFIG_WAKEUP_GPIO_MASK, ESP_GPIO_WAKEUP_GPIO_LOW);
-
-    // 配置GPIO下拉（编码器引脚）
-    gpio_pullup_dis((gpio_num_t)CONFIG_ENCODER_PIN_A);
-    gpio_pulldown_en((gpio_num_t)CONFIG_ENCODER_PIN_A);
-    gpio_pullup_dis((gpio_num_t)CONFIG_ENCODER_PIN_B);
-    gpio_pulldown_en((gpio_num_t)CONFIG_ENCODER_PIN_B);
-
-    // 按键保持上拉
-    gpio_pullup_en((gpio_num_t)CONFIG_ENCODER_PIN_BTN);
-    gpio_pulldown_dis((gpio_num_t)CONFIG_ENCODER_PIN_BTN);
 
     g_last_activity_time = millis();
 
@@ -110,33 +98,17 @@ wakeup_reason_t power_mgmt_get_wakeup_reason(void) {
 
 /**
  * @brief 进入深度睡眠
+ * 注：ESP32-C2无RTC内存，状态已在运行时保存到NVS
  */
-void power_mgmt_enter_deep_sleep(bool save_to_nvs) {
+void power_mgmt_enter_deep_sleep(void) {
     LOG_I("Entering deep sleep...");
-
-    // 保存状态到RTC（总是保存）
-    // RTC变量已经在其他地方更新，这里仅打印确认
-    LOG_I("RTC paired: %d", rtc_is_paired);
-    if (rtc_is_paired) {
-        LOG_I("RTC peer MAC: ");
-        print_mac(rtc_peer_mac);
-        Serial.printf(", channel: %d\n", rtc_peer_channel);
-    }
-
-    // 可选：保存到NVS（持久化存储）
-    if (save_to_nvs) {
-        if (rtc_is_paired) {
-            power_mgmt_save_pairing_info(rtc_peer_mac, rtc_peer_channel);
-        }
-        power_mgmt_save_lamp_state(&rtc_lamp_state);
-        LOG_I("State saved to NVS");
-    }
+    LOG_I("(State already saved to NVS during operation)");
 
     // 确保串口输出完成
     Serial.flush();
     delay(100);
 
-    // 进入深度睡眠
+    // 进入深度睡眠（不会返回，唤醒后系统重启）
     esp_deep_sleep_start();
 }
 
@@ -290,78 +262,8 @@ bool power_mgmt_clear_nvs(void) {
     return true;
 }
 
-// ==================== RTC内存操作 ====================
-
-/**
- * @brief 从RTC恢复配对信息
- */
-bool power_mgmt_restore_pairing_from_rtc(uint8_t *peer_mac_out, uint8_t *peer_channel_out) {
-    if (peer_mac_out == NULL || peer_channel_out == NULL) {
-        return false;
-    }
-
-    if (!rtc_is_paired || is_mac_zero(rtc_peer_mac)) {
-        LOG_W("No valid pairing info in RTC");
-        return false;
-    }
-
-    memcpy(peer_mac_out, rtc_peer_mac, 6);
-    *peer_channel_out = rtc_peer_channel;
-
-    LOG_I("Pairing info restored from RTC: ");
-    print_mac(peer_mac_out);
-    Serial.printf(", channel: %d\n", *peer_channel_out);
-
-    return true;
-}
-
-/**
- * @brief 保存配对信息到RTC
- */
-void power_mgmt_save_pairing_to_rtc(const uint8_t *peer_mac, uint8_t peer_channel) {
-    if (peer_mac == NULL) {
-        return;
-    }
-
-    memcpy(rtc_peer_mac, peer_mac, 6);
-    rtc_peer_channel = peer_channel;
-    rtc_is_paired = true;
-
-    LOG_D("Pairing info saved to RTC");
-}
-
-/**
- * @brief 从RTC恢复灯光状态
- */
-bool power_mgmt_restore_lamp_state_from_rtc(lamp_state_t *state_out) {
-    if (state_out == NULL) {
-        return false;
-    }
-
-    // 检查RTC状态是否有效（简单检查brightness范围）
-    if (rtc_lamp_state.brightness > CONFIG_MAX_BRIGHTNESS) {
-        LOG_W("Invalid lamp state in RTC");
-        return false;
-    }
-
-    memcpy(state_out, &rtc_lamp_state, sizeof(lamp_state_t));
-
-    LOG_D("Lamp state restored from RTC: brightness=%u, temp=%.2f",
-          state_out->brightness, state_out->temperature);
-    return true;
-}
-
-/**
- * @brief 保存灯光状态到RTC
- */
-void power_mgmt_save_lamp_state_to_rtc(const lamp_state_t *state) {
-    if (state == NULL) {
-        return;
-    }
-
-    memcpy(&rtc_lamp_state, state, sizeof(lamp_state_t));
-    LOG_D("Lamp state saved to RTC");
-}
+// ==================== RTC内存操作（已移除） ====================
+// ESP32-C2不支持RTC内存，所有数据通过NVS存储
 
 /**
  * @brief 打印启动信息

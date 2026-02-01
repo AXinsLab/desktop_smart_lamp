@@ -2,7 +2,8 @@
  * @file power_mgmt.h
  * @brief 电源管理模块
  *
- * 负责深度睡眠、唤醒处理、NVS存储、RTC内存管理
+ * 负责深度睡眠、唤醒处理、NVS存储
+ * 注：ESP32-C2无RTC内存，完全依赖NVS存储
  */
 
 #pragma once
@@ -11,17 +12,6 @@
 #include <stdbool.h>
 #include <esp_sleep.h>
 #include "lamp_state.h"
-
-// ==================== RTC内存变量声明 ====================
-// 这些变量在深度睡眠期间保持，用于快速恢复
-
-// RTC内存中的配对信息
-extern RTC_DATA_ATTR bool rtc_is_paired;
-extern RTC_DATA_ATTR uint8_t rtc_peer_mac[6];
-extern RTC_DATA_ATTR uint8_t rtc_peer_channel;
-
-// RTC内存中的灯光状态
-extern RTC_DATA_ATTR lamp_state_t rtc_lamp_state;
 
 // ==================== 唤醒原因 ====================
 typedef enum {
@@ -54,11 +44,9 @@ wakeup_reason_t power_mgmt_get_wakeup_reason(void);
 /**
  * @brief 进入深度睡眠
  *
- * 保存状态到RTC和NVS，然后进入深度睡眠
- *
- * @param save_to_nvs 是否同时保存到NVS（RTC总是保存）
+ * 保存状态到NVS，然后进入深度睡眠
  */
-void power_mgmt_enter_deep_sleep(bool save_to_nvs);
+void power_mgmt_enter_deep_sleep(void);
 
 /**
  * @brief 检查是否应该进入睡眠
@@ -132,42 +120,6 @@ bool power_mgmt_load_lamp_state(lamp_state_t *state_out);
  * @return false 清除失败
  */
 bool power_mgmt_clear_nvs(void);
-
-// ==================== RTC内存操作 ====================
-
-/**
- * @brief 从RTC内存恢复配对信息
- *
- * @param peer_mac_out 输出MAC地址缓冲区（至少6字节）
- * @param peer_channel_out 输出信道指针
- * @return true RTC中有有效配对信息
- * @return false RTC中无配对信息（首次启动或RTC丢失）
- */
-bool power_mgmt_restore_pairing_from_rtc(uint8_t *peer_mac_out, uint8_t *peer_channel_out);
-
-/**
- * @brief 保存配对信息到RTC内存
- *
- * @param peer_mac 驱动器MAC地址
- * @param peer_channel 驱动器信道
- */
-void power_mgmt_save_pairing_to_rtc(const uint8_t *peer_mac, uint8_t peer_channel);
-
-/**
- * @brief 从RTC内存恢复灯光状态
- *
- * @param state_out 输出灯光状态指针
- * @return true RTC中有有效状态
- * @return false RTC中无状态
- */
-bool power_mgmt_restore_lamp_state_from_rtc(lamp_state_t *state_out);
-
-/**
- * @brief 保存灯光状态到RTC内存
- *
- * @param state 灯光状态指针
- */
-void power_mgmt_save_lamp_state_to_rtc(const lamp_state_t *state);
 
 /**
  * @brief 打印启动信息和唤醒原因（调试用）

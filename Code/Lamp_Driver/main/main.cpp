@@ -39,10 +39,11 @@ bool initialize_system(void) {
 // ==================== Arduino Setup ====================
 
 void setup() {
+#if CONFIG_LOG_LEVEL_DEBUG
     // 初始化串口
     Serial.begin(CONFIG_SERIAL_BAUD_RATE);
     delay(500);  // 增加延迟确保串口稳定
-
+#endif
     LOG_I("======================================");
     LOG_I("    Smart Lamp Driver Starting");
     LOG_I("======================================");

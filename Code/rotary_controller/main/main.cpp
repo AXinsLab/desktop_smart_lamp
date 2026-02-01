@@ -51,40 +51,24 @@ bool initialize_system(void) {
 }
 
 /**
- * @brief 恢复上次状态和配对信息
+ * @brief 恢复上次状态和配对信息（从NVS）
+ * ESP32-C2无RTC内存，所有状态从NVS恢复
  */
 void restore_state(void) {
-    wakeup_reason_t wakeup_reason = power_mgmt_get_wakeup_reason();
-
-    // 尝试从RTC恢复配对信息（快速路径）
-    uint8_t peer_mac[6];
-    uint8_t peer_channel;
-
-    if (wakeup_reason != WAKEUP_REASON_POWER_ON &&
-        power_mgmt_restore_pairing_from_rtc(peer_mac, &peer_channel)) {
-        // 深度睡眠唤醒，使用RTC快速重连
-        LOG_I("Quick reconnect from RTC...");
-        if (espnow_ctrl_quick_reconnect(peer_mac, peer_channel)) {
-            LOG_I("Quick reconnect successful");
-        } else {
-            LOG_W("Quick reconnect failed, will try auto pair");
-        }
-    }
-
     // 恢复灯光状态
-    if (!power_mgmt_restore_lamp_state_from_rtc(&g_current_lamp_state)) {
-        // RTC中没有有效状态，尝试从NVS恢复
-        if (!power_mgmt_load_lamp_state(&g_current_lamp_state)) {
-            // NVS中也没有，使用默认值
-            LOG_I("Using default lamp state");
-            lamp_state_init_default(&g_current_lamp_state);
-        }
+    if (!power_mgmt_load_lamp_state(&g_current_lamp_state)) {
+        // NVS中没有，使用默认值
+        LOG_I("Using default lamp state");
+        lamp_state_init_default(&g_current_lamp_state);
     }
 
     LOG_I("Lamp state: on=%d, brightness=%u, temp=%.2f",
           g_current_lamp_state.is_on,
           g_current_lamp_state.brightness,
           g_current_lamp_state.temperature);
+
+    // 同步新状态与当前状态
+    memcpy(&g_new_lamp_state, &g_current_lamp_state, sizeof(lamp_state_t));
 }
 
 /**
@@ -103,9 +87,12 @@ void start_pairing(void) {
 // ==================== Arduino Setup ====================
 
 void setup() {
+
+#if CONFIG_LOG_LEVEL_DEBUG
     // 初始化串口
     Serial.begin(CONFIG_SERIAL_BAUD_RATE);
-    delay(500);  // 增加延迟确保串口稳定
+    delay(100);  // 增加延迟确保串口稳定
+#endif
 
     LOG_I("======================================");
     LOG_I("  Smart Lamp Controller Starting");
@@ -185,8 +172,8 @@ void loop() {
             // 更新电源管理活动时间
             power_mgmt_update_activity();
 
-            // 保存到RTC（为下次睡眠准备）
-            power_mgmt_save_lamp_state_to_rtc(&g_new_lamp_state);
+            // 保存到NVS（ESP32-C2无RTC内存，立即持久化）
+            power_mgmt_save_lamp_state(&g_new_lamp_state);
         }
     }
 
@@ -231,11 +218,11 @@ void loop() {
         uint32_t last_activity = encoder_get_last_activity_time();
 
         if (power_mgmt_should_sleep(last_activity) && espnow_ctrl_is_paired()) {
-            LOG_I("Idle timeout, entering deep sleep...");
+            LOG_I("Idle timeout, entering sleep...");
 
-            // 保存状态到NVS（每次睡眠都保存，确保数据持久化）
-            power_mgmt_enter_deep_sleep(true);
-            // 此函数不会返回
+            // ESP32-C2: 状态已在运行时保存到NVS
+            power_mgmt_enter_deep_sleep();
+            // 注：Deep Sleep不会返回，系统将重启
         }
     }
 

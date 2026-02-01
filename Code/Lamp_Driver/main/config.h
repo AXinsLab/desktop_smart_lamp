@@ -20,7 +20,7 @@
 #define CONFIG_MIN_DUTY                0     // 最小duty值
 
 // ==================== LED淡入淡出参数 ====================
-#define CONFIG_LED_STEP_FADE_TIME_MS   3     // 每步淡入淡出时间
+#define CONFIG_LED_STEP_FADE_TIME_MS   10     // 每步淡入淡出时间
 #define CONFIG_LED_POWER_FADE_TIME_MS  2000  // 开关灯淡入淡出时间
 
 // ==================== 色温范围 ====================
@@ -39,7 +39,7 @@
 
 // ==================== 调试配置 ====================
 #define CONFIG_SERIAL_BAUD_RATE        115200
-#define CONFIG_LOG_LEVEL_DEBUG         0     // 启用调试日志（0=关闭，1=启用）
+#define CONFIG_LOG_LEVEL_DEBUG         1     // 启用调试日志（0=关闭，1=启用）
 
 // ==================== 日志宏定义 ====================
 #if CONFIG_LOG_LEVEL_DEBUG
