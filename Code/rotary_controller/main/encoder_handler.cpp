@@ -31,6 +31,9 @@ static encoder_event_t g_button_event = ENCODER_EVENT_NONE;
 static uint32_t g_button_press_start_time = 0;
 static bool g_button_was_pressed = false;
 
+// 按键按住期间是否旋转过编码器（用于避免调节色温时误触发长按/重置）
+static bool g_encoder_rotated_during_press = false;
+
 /**
  * @brief 短按回调（用于Button2）
  */
@@ -45,6 +48,12 @@ static void on_button_click(Button2 &btn) {
  * @brief 长按回调（用于Button2）
  */
 static void on_button_long_press(Button2 &btn) {
+    // 关键逻辑：如果按住期间有旋转编码器，则忽略长按事件（用户在调节色温）
+    if (g_encoder_rotated_during_press) {
+        LOG_D("Long press ignored (encoder was rotated during press)");
+        return;
+    }
+
     LOG_I("Button long pressed");
     g_button_event = ENCODER_EVENT_BTN_LONG_PRESS;
     g_last_activity_time = millis();
@@ -115,40 +124,10 @@ encoder_event_t encoder_process(const lamp_state_t *current_state, lamp_state_t 
 
     encoder_event_t event = ENCODER_EVENT_NONE;
 
-    // 更新按键状态
-    g_encoder_button->loop();
+    // ===== 关键修复：先检测编码器旋转，再调用按键loop() =====
+    // 这样可以在Button2的长按回调触发前设置好标志位，避免竞态条件
 
-    // 检测超长按（5秒重置）
-    if (g_encoder_button->isPressed()) {
-        if (!g_button_was_pressed) {
-            g_button_press_start_time = millis();
-            g_button_was_pressed = true;
-        } else {
-            uint32_t press_duration = millis() - g_button_press_start_time;
-            if (press_duration >= CONFIG_BTN_RESET_PRESS_MS) {
-                LOG_I("RESET: 5s press detected!");
-                g_button_event = ENCODER_EVENT_BTN_RESET;
-                g_button_was_pressed = false;  // 防止重复触发
-            }
-        }
-    } else {
-        g_button_was_pressed = false;
-    }
-
-    // 检查按键按下/释放（切换模式）
-    if (g_encoder_button->isPressed()) {
-        if (g_current_mode != ENCODER_MODE_TEMPERATURE) {
-            g_current_mode = ENCODER_MODE_TEMPERATURE;
-            LOG_D("Switched to TEMPERATURE mode");
-        }
-    } else {
-        if (g_current_mode != ENCODER_MODE_BRIGHTNESS) {
-            g_current_mode = ENCODER_MODE_BRIGHTNESS;
-            LOG_D("Switched to BRIGHTNESS mode");
-        }
-    }
-
-    // 检查编码器旋转
+    // 检查编码器旋转（优先检测）
     if (g_rotary_encoder->encoderChanged()) {
         int32_t current_value = g_rotary_encoder->readEncoder();
         int32_t delta = current_value - g_last_encoder_value;
@@ -158,6 +137,15 @@ encoder_event_t encoder_process(const lamp_state_t *current_state, lamp_state_t 
 
         g_last_activity_time = millis();
         g_activity_flag = true;
+
+        // 关键逻辑：如果按键正在按下，立即标记为"色温调节模式"
+        // 一旦进入此模式，本次按键期间将不再触发长按/重置
+        if (g_encoder_button->isPressed()) {
+            if (!g_encoder_rotated_during_press) {
+                LOG_D("Entered color temp adjustment mode");
+            }
+            g_encoder_rotated_during_press = true;
+        }
 
         // 复制当前状态到新状态
         memcpy(new_state, current_state, sizeof(lamp_state_t));
@@ -214,6 +202,48 @@ encoder_event_t encoder_process(const lamp_state_t *current_state, lamp_state_t 
         lamp_calculate_duty(new_state);
     }
 
+    // ===== 更新按键状态（在编码器检测之后，确保标志位已设置）=====
+    g_encoder_button->loop();
+
+    // 检测超长按（5秒重置）
+    if (g_encoder_button->isPressed()) {
+        if (!g_button_was_pressed) {
+            // 按键刚按下：重置旋转标志
+            g_button_press_start_time = millis();
+            g_button_was_pressed = true;
+            g_encoder_rotated_during_press = false;  // 每次按键重置标志
+        } else {
+            // 按键持续按下：检查是否达到5秒重置时长
+            uint32_t press_duration = millis() - g_button_press_start_time;
+            if (press_duration >= CONFIG_BTN_RESET_PRESS_MS) {
+                // 关键逻辑：仅在未旋转编码器时触发重置
+                if (!g_encoder_rotated_during_press) {
+                    LOG_I("RESET: 5s press detected! (rotated_flag=%d)", g_encoder_rotated_during_press);
+                    g_button_event = ENCODER_EVENT_BTN_RESET;
+                    g_button_was_pressed = false;
+                } else {
+                    LOG_I("RESET ignored (encoder was rotated during press)");
+                    g_button_was_pressed = false;
+                }
+            }
+        }
+    } else {
+        g_button_was_pressed = false;
+    }
+
+    // 检查按键按下/释放（切换模式）
+    if (g_encoder_button->isPressed()) {
+        if (g_current_mode != ENCODER_MODE_TEMPERATURE) {
+            g_current_mode = ENCODER_MODE_TEMPERATURE;
+            LOG_D("Switched to TEMPERATURE mode");
+        }
+    } else {
+        if (g_current_mode != ENCODER_MODE_BRIGHTNESS) {
+            g_current_mode = ENCODER_MODE_BRIGHTNESS;
+            LOG_D("Switched to BRIGHTNESS mode");
+        }
+    }
+
     // 检查按键事件（由Button2回调或超长按检测设置）
     if (g_button_event != ENCODER_EVENT_NONE) {
         if (g_button_event == ENCODER_EVENT_BTN_RESET) {
@@ -223,16 +253,16 @@ encoder_event_t encoder_process(const lamp_state_t *current_state, lamp_state_t 
             memcpy(new_state, current_state, sizeof(lamp_state_t));
 
             if (g_button_event == ENCODER_EVENT_BTN_CLICK) {
-                // 短按：切换开关
-                LOG_I("Short press: toggling lamp");
-                new_state->is_on = !current_state->is_on;
-                if (new_state->is_on) {
+                // 短按：仅在关灯状态下开灯，开灯状态下无操作
+                if (!current_state->is_on) {
+                    LOG_I("Short press: turning on lamp");
+                    new_state->is_on = true;
                     lamp_calculate_duty(new_state);
+                    event = ENCODER_EVENT_BTN_CLICK;
                 } else {
-                    new_state->duty_ch0 = 0;
-                    new_state->duty_ch1 = 0;
+                    LOG_D("Short press: lamp already on, no operation");
+                    // 灯已开启，短按无操作
                 }
-                event = ENCODER_EVENT_BTN_CLICK;
             }
             else if (g_button_event == ENCODER_EVENT_BTN_LONG_PRESS) {
                 // 长按：关灯

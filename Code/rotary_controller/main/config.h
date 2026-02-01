@@ -24,7 +24,7 @@
 // ==================== 按键参数 ====================
 #define CONFIG_BTN_DEBOUNCE_MS         50    // 消抖时间
 #define CONFIG_BTN_LONG_PRESS_MS       2000  // 长按触发时间
-#define CONFIG_BTN_RESET_PRESS_MS      5000  // 超长按重置配对时间
+#define CONFIG_BTN_RESET_PRESS_MS      6000  // 超长按重置配对时间
 #define CONFIG_BTN_DOUBLE_CLICK_MS     300   // 双击检测时间
 
 // ==================== PWM参数 ====================
@@ -51,8 +51,8 @@
 #define CONFIG_PAIRING_BROADCAST_MAC   {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 // ==================== 电源管理参数 ====================
-#define CONFIG_SLEEP_TIMEOUT_MS        5000  // 无操作后进入睡眠时间（5秒）
-#define CONFIG_SLEEP_CHECK_INTERVAL_MS 500   // 睡眠检查间隔
+#define CONFIG_SLEEP_TIMEOUT_MS        10000  // 无操作后进入睡眠时间（5秒）
+#define CONFIG_SLEEP_CHECK_INTERVAL_MS 1000   // 睡眠检查间隔
 
 // ==================== GPIO唤醒配置 ====================
 // 编码器A/B相或按键任意一个下降沿唤醒

@@ -152,10 +152,15 @@ void loop() {
     // 处理重置事件
     if (event == ENCODER_EVENT_BTN_RESET) {
         LOG_I("=== RESET: Clearing pairing ===");
-        power_mgmt_clear_nvs();
+
+        bool nvs_cleared = power_mgmt_clear_nvs();
+        LOG_I("NVS clear result: %d", nvs_cleared);
+
         espnow_ctrl_clear_pairing();
-        LOG_I("Restarting...");
-        delay(1000);
+        LOG_I("Pairing cleared from memory");
+
+        LOG_I("Restarting in 2 seconds...");
+        delay(2000);
         ESP.restart();
     }
 
